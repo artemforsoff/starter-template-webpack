@@ -1,15 +1,20 @@
-const path = require('path');
-const { CleanWebpackPlugin } = require('clean-webpack-plugin');
-const webpack = require('webpack');
-const HtmlWebpackPlugin = require('html-webpack-plugin');
-const MiniCssExtractPlugin = require('mini-css-extract-plugin');
+import * as webpack from 'webpack';
+import * as path from 'path';
+import * as HtmlWebpackPlugin from 'html-webpack-plugin';
+import { CleanWebpackPlugin } from 'clean-webpack-plugin';
+import * as MiniCssExtractPlugin from 'mini-css-extract-plugin';
+import * as webpackDevServer from 'webpack-dev-server';
 
-module.exports = {
-    // performance: {
-    //     hints: false,
-    //     maxEntrypointSize: 512000,
-    //     maxAssetSize: 512000
-    // },
+const isDev = process.env.ENV === 'DEVELOPMENT';
+const isProd = process.env.ENV === 'PRODUCTION';
+
+const getFilename = (ext: string) => (isDev ? `[name].${ext}` : `[name].[contenthash].${ext}`);
+
+interface IWebpackConfig extends webpack.Configuration {
+    devServer: webpackDevServer.Configuration;
+}
+
+const config: IWebpackConfig = {
     devServer: {
         historyApiFallback: true,
         contentBase: path.resolve(__dirname, './dist'),
@@ -17,13 +22,12 @@ module.exports = {
         compress: true,
         hot: true,
         port: 8080,
-        // bonjour: true
     },
     entry: ['./src/ts/index.ts', './src/scss/index.scss'],
     devtool: 'inline-source-map',
     output: {
         path: path.resolve(__dirname, 'dist'),
-        filename: 'bundle.js',
+        filename: `./js/${getFilename('js')}`,
     },
     module: {
         rules: [
@@ -36,19 +40,30 @@ module.exports = {
                 include: path.resolve(__dirname, 'src/scss'),
                 use: [MiniCssExtractPlugin.loader, 'css-loader', 'postcss-loader', 'sass-loader'],
             },
+            {
+                test: /\.html$/i,
+                loader: 'html-loader',
+                options: {
+                    minimize: true,
+                },
+            },
         ],
     },
     plugins: [
         new HtmlWebpackPlugin({
-            title: 'webpack Boilerplate',
             template: path.resolve(__dirname, './src/index.html'),
-            filename: 'index.html', // название выходного файла
+            filename: 'index.html',
+            minify: {
+                collapseWhitespace: isProd,
+            },
         }),
         new MiniCssExtractPlugin({
-            filename: '[name].css',
+            filename: `./css/${getFilename('css')}`,
             chunkFilename: '[id].css',
         }),
         new CleanWebpackPlugin(),
         new webpack.HotModuleReplacementPlugin(),
     ],
 };
+
+export default config;
